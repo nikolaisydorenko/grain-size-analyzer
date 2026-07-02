@@ -1,0 +1,35 @@
+# Virtual environments
+.venv/
+venv/
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+
+# VCS
+.git/
+.gitignore
+
+# Local data (persisted via volumes instead)
+*.duckdb
+*.duckdb.wal
+data/
+out/
+cache/*.jpg
+cache/*.jpeg
+cache/*.png
+
+# Node / editor / OS noise
+node_modules/
+.idea/
+.vscode/
+.DS_Store
+
+# Docker files themselves
+Dockerfile
+docker-compose.yml
+.dockerignore

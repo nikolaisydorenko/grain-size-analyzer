@@ -1,0 +1,15 @@
+services:
+  grainsize:
+    build: .
+    ports:
+      - "${PORT:-5066}:5066"
+    environment:
+      PORT: "5066"
+      # Keep the DuckDB database and exports on mounted paths so they persist.
+      GRAINSIZE_DB: /app/data/grainsize.duckdb
+      GRAINSIZE_EXPORT_DIR: /app/out
+    volumes:
+      - ./data:/app/data
+      - ./cache:/app/cache
+      - ./out:/app/out
+    restart: unless-stopped

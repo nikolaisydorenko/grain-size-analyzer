@@ -1,0 +1,23 @@
+# user images (keep micrographs out of version control)
+cache/*.jpg
+cache/*.jpeg
+cache/*.png
+cache/*.tif
+cache/*.tiff
+!cache/index.json
+
+# local results store & exports
+*.duckdb
+out/*
+!out/.gitkeep
+overlays/
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# editor / OS
+.DS_Store
+Thumbs.db
