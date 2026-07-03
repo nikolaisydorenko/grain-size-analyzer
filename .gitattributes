@@ -1,0 +1,4 @@
+# Windows batch files must be CRLF regardless of the cloner's autocrlf setting
+*.bat text eol=crlf
+# Shell scripts must stay LF even when cloned on Windows
+*.sh  text eol=lf

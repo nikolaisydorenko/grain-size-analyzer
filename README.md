@@ -134,42 +134,61 @@ any ℓ value.** (G shifts by the log of any scale error, so this matters.)
 
 ## Install
 
-Requirements: Python 3.11+ (or Docker).
+Works on **Windows, macOS, and Linux**. You need either **Python 3.11+** or
+**Docker** — nothing else.
 
-### One-liner
+### Windows
+
+1. Install Python from [python.org/downloads](https://www.python.org/downloads/)
+   — during setup, tick **"Add python.exe to PATH"**.
+2. Get the code: `git clone https://github.com/nikolaisydorenko/grain-size-analyzer`
+   — or click **Code → Download ZIP** on GitHub and extract it (no git needed).
+3. Double-click **`run.bat`** in the extracted folder.
+
+The first run creates a private virtual environment and installs the
+dependencies automatically; then your browser opens at
+`http://localhost:5066`. Every later run starts instantly. To use another
+port: `set PORT=8080` in the terminal before running it.
+
+### macOS / Linux
 
 ```bash
-git clone <repo-url> && cd grain-size-analyzer && ./install.sh
+git clone https://github.com/nikolaisydorenko/grain-size-analyzer
+cd grain-size-analyzer
 ./run.sh
 # open http://localhost:5066
 ```
 
-### Docker
+`run.sh` self-installs on first use (creates `.venv`, installs dependencies)
+and just starts the app afterwards. `./install.sh` runs the install step alone.
+On a fresh Mac, running `python3` once triggers the Command Line Tools install
+if needed (or `brew install python`).
+
+Make targets are available too: `make install`, `make run`, `make docker`.
+
+### Docker (any platform)
 
 ```bash
+git clone https://github.com/nikolaisydorenko/grain-size-analyzer
+cd grain-size-analyzer
 docker compose up
 # open http://localhost:5066
 ```
 
-### Make
+Data (the DuckDB results store, image cache, and exports) persists in
+`./data`, `./cache`, and `./out` next to the compose file.
 
-```bash
-make install   # create venv + install dependencies
-make run       # start the app
-make docker    # build & run the container
-```
-
-### Manual
+### Manual (any platform, no scripts)
 
 ```bash
 pip install -r requirements.txt
-python3 app.py
+python app.py            # python3 on macOS/Linux
 # open http://localhost:5066
 ```
 
 The port defaults to **5066**; override it with the `PORT` environment variable
-(e.g. `PORT=8080 python3 app.py`). The DuckDB path can be overridden with
-`GRAINSIZE_DB`.
+(e.g. `PORT=8080 python3 app.py`, or `set PORT=8080` on Windows). The DuckDB
+path can be overridden with `GRAINSIZE_DB`.
 
 ---
 
@@ -228,7 +247,8 @@ for a systemd unit example and the Docker option.
 ```
 app.py                     Flask app — UI + API + DuckDB store, single file
 requirements.txt
-install.sh / run.sh        Convenience install & run scripts
+install.sh / run.sh        Install & run scripts (macOS / Linux)
+run.bat                    Double-click launcher (Windows)
 Makefile                   make install / run / docker
 Dockerfile, docker-compose.yml
 scripts/prepare_cache.py   Bulk-load cache/ + index.json from a folder of images
