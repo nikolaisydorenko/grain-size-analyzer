@@ -513,6 +513,7 @@ def export_xlsx():
 
 PAGE = r"""
 <!doctype html><html lang=en><head><meta charset=utf-8>
+<link rel=icon type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij4KIDxkZWZzPgogIDxsaW5lYXJHcmFkaWVudCBpZD0iYmciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjM2I4MmY2Ii8+CiAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzdjM2FlZCIvPgogIDwvbGluZWFyR3JhZGllbnQ+CiA8L2RlZnM+CiA8IS0tIGFwcCB0aWxlIC0tPgogPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9InVybCgjYmcpIi8+CiA8IS0tIGdyYWluIGJvdW5kYXJpZXMgbWVldGluZyBhdCBhIHRyaXBsZSBqdW5jdGlvbiAtLT4KIDxnIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwuOTIpIiBzdHJva2Utd2lkdGg9IjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgZmlsbD0ibm9uZSI+CiAgPHBhdGggZD0iTTIgMTcgTDMxIDMwIEw2MiAxOSIvPgogIDxwYXRoIGQ9Ik0zMSAzMCBMMzIgNjIiLz4KIDwvZz4KIDwhLS0gQWJyYW1zIGludGVyY2VwdCB0ZXN0IGNpcmNsZSAtLT4KIDxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjE2IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZjRkNGQiIHN0cm9rZS13aWR0aD0iMy4yIi8+CiA8IS0tIGNvdW50ZWQgaW50ZXJjZXB0IG1hcmtzIChjaXJjbGUgeCBib3VuZGFyeSkgLS0+CiA8ZyBmaWxsPSIjMjJmZjc3IiBzdHJva2U9IiMwNjIxMGYiIHN0cm9rZS13aWR0aD0iMS4yIj4KICA8Y2lyY2xlIGN4PSIxOC4xIiBjeT0iMjQiIHI9IjMuMSIvPgogIDxjaXJjbGUgY3g9IjQ1LjkiIGN5PSIyNCIgcj0iMy4xIi8+CiAgPGNpcmNsZSBjeD0iMzIiIGN5PSI0OCIgcj0iMy4xIi8+CiA8L2c+Cjwvc3ZnPgo=">
 <meta name=viewport content="width=device-width,initial-scale=1">
 <title>Grain Size Analyzer · ASTM E112</title>
 <style>
@@ -647,7 +648,7 @@ PAGE = r"""
 </style></head><body>
 
 <div class=appbar>
- <div class=brand><span class=logo>🔬</span><div>Grain Size Analyzer<small>ASTM E112 · intercept method</small></div></div>
+ <div class=brand><span class=logo><svg viewBox="0 0 64 64" width="20" height="20" aria-hidden="true"><g stroke="rgba(255,255,255,.92)" stroke-width="4" stroke-linecap="round" fill="none"><path d="M2 17 L31 30 L62 19"/><path d="M31 30 L32 62"/></g><circle cx="32" cy="32" r="16" fill="none" stroke="#ff4d4d" stroke-width="4.2"/><g fill="#22ff77" stroke="#06210f" stroke-width="1.5"><circle cx="18.1" cy="24" r="4"/><circle cx="45.9" cy="24" r="4"/><circle cx="32" cy="48" r="4"/></g></svg></span><div>Grain Size Analyzer<small>ASTM E112 · intercept method</small></div></div>
  <div class=seg>
   <button id=tabCircle onclick="setMethod('circle')">◎ Abrams circles</button>
   <button id=tabLine onclick="setMethod('line')">▤ Heyn lines</button>

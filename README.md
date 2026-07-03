@@ -1,3 +1,5 @@
+<p align="center"><img src="logo.svg" width="110" alt="Grain Size Analyzer logo"></p>
+
 # Grain Size Analyzer
 
 A self-hosted web tool for **manual grain-size measurement** of metallographic
