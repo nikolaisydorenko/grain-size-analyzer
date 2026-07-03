@@ -10,6 +10,12 @@ the **mean lineal intercept length (ℓ)** and the **ASTM grain-size number (G)*
 and aggregates results per condition with proper (Student's-t) confidence
 intervals. Everything is stored locally in a single DuckDB file.
 
+**▶ Try the live browser demo (no install):**
+https://nikolaisydorenko.github.io/grain-size-analyzer-demo/ — the full GUI with
+sample micrographs and a first-run guided tour. Self-hosting this repo additionally
+unlocks the XLSX export with a native chart, batch overlay ZIPs, and the
+DuckDB/SQL database.
+
 ---
 
 ## Why manual?
