@@ -18,6 +18,8 @@ sample micrographs and a first-run guided tour. Self-hosting this repo additiona
 unlocks the XLSX export with a native chart, batch overlay ZIPs, and the
 DuckDB/SQL database.
 
+![Counting intercepts on the Abrams three-circle grid — live N / ℓ / G readout and per-condition statistics](docs/screenshots/main-abrams.png)
+
 ---
 
 ## Why manual?
@@ -75,7 +77,18 @@ loop while automating the geometry, arithmetic, statistics, and bookkeeping.
 
 ---
 
-## The science
+## Interface
+
+| | |
+|:---:|:---:|
+| ![Heyn lineal intercept grid](docs/screenshots/heyn-lines.png) | ![First-run guided tour](docs/screenshots/guided-tour.png) |
+| **Heyn lineal grid** — selectable line density | **Guided tour** — first launch walks through every tool (replay with 🎓) |
+| ![Built-in method reference](docs/screenshots/reference.png) | |
+| **Method reference** — formulas & ASTM citations behind the `?` button | |
+
+---
+
+## Measurement methodology (ASTM E112)
 
 ### Mean lineal intercept
 
