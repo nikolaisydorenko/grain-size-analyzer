@@ -83,8 +83,8 @@ loop while automating the geometry, arithmetic, statistics, and bookkeeping.
 |:---:|:---:|
 | ![Heyn lineal intercept grid](docs/screenshots/heyn-lines.png) | ![First-run guided tour](docs/screenshots/guided-tour.png) |
 | **Heyn lineal grid** — selectable line density | **Guided tour** — first launch walks through every tool (replay with 🎓) |
-| ![Built-in method reference](docs/screenshots/reference.png) | |
-| **Method reference** — formulas & ASTM citations behind the `?` button | |
+| ![Built-in method reference](docs/screenshots/reference.png) | ![Scale-bar calibration tool](docs/screenshots/calibration.png) |
+| **Method reference** — formulas & ASTM citations behind the `?` button | **📏 Scale-bar calibration** — click the bar's ends, enter its length, µm/px is set |
 
 ---
 
