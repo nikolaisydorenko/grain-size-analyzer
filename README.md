@@ -13,7 +13,7 @@ and aggregates results per condition with proper (Student's-t) confidence
 intervals. Everything is stored locally in a single DuckDB file.
 
 **▶ Try the live browser demo (no install):**
-https://nikolaisydorenko.github.io/grain-size-analyzer-demo/ — the full GUI with
+https://nikolaisydorenko.github.io/grain-size-analyzer/ — the full GUI with
 sample micrographs and a first-run guided tour. Self-hosting this repo additionally
 unlocks the XLSX export with a native chart, batch overlay ZIPs, and the
 DuckDB/SQL database.
@@ -259,6 +259,7 @@ docs/USER_GUIDE.md         Measuring workflow & tips
 docs/METHODS.md            ASTM E112 method notes & formulas
 docs/DEPLOYMENT.md         systemd / Docker deployment
 docs/ASTM_E112.md          ASTM E112 reference
+docs/index.html            Live browser demo (served via GitHub Pages)
 ```
 
 ---
