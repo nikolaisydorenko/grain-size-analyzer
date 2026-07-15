@@ -27,6 +27,13 @@ This judgement is the entire reason the measurement is done by hand. When unsure
   **invert** change only the display, never the saved data — use them to see faint
   boundaries, then **reset**.
 - **🔍 Loupe** — toggles a magnifier that follows the cursor for precise clicks.
+- **✥ Move circles** — repositions the Abrams circle grid on this image (for
+  off-centre micrographs): toggle it, drag the circles where you want them, then
+  toggle off (or press `Esc`). The position is saved per image and used in overlay
+  exports. Moving the grid never changes the test-line length, so ℓ and G are
+  unaffected — but if you've already counted marks on the old position, clear and
+  recount. **⌖ Centre** resets to the image centre. (Circle method only — the Heyn
+  lines always span the full frame.)
 - **snap to grid** — when on, each click lands exactly on the nearest circle/line.
 - **Right-click a mark** to delete just that one (vs. `Z`/Undo which removes the last).
 - **Middle-mouse drag** pans when you're zoomed in; **⤢ Fit** returns to whole-frame.
