@@ -10,7 +10,7 @@ import or with the in-app scale-bar tool. Images are grouped by a free-text
 "condition" label with an optional numeric "value" for ordering/charting.
 Results persist in DuckDB; exports: CSV, XLSX + native chart, annotated overlays.
 """
-import os, json, math, csv, io, datetime
+import os, json, math, csv, io, datetime, threading
 import duckdb
 from PIL import Image, ImageDraw
 from werkzeug.utils import secure_filename
@@ -49,7 +49,16 @@ LINE_PRESETS = {
 }
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 60*1024*1024
+# 300 MB: full-resolution 16-bit TIFF exports from a DSLR can reach ~140 MB; a
+# lower cap rejected them with an HTML 413 the upload UI couldn't parse.
+app.config["MAX_CONTENT_LENGTH"] = 300*1024*1024
+_DB_WRITE_LOCK = threading.Lock()
+
+@app.errorhandler(413)
+def too_large(e):
+    mb = app.config["MAX_CONTENT_LENGTH"] // (1024*1024)
+    return jsonify(ok=False, error=f"file is larger than the {mb} MB upload limit — "
+                   "export a JPEG (or a smaller TIFF) and re-import"), 413
 FOLDERS_PATH = os.path.join(CACHE, "folders.json")
 INDEX = json.load(open(INDEX_PATH)) if os.path.exists(INDEX_PATH) else []
 
@@ -234,7 +243,8 @@ def set_condition():
         try: d["value"] = float(b["value"]) if b["value"] not in (None, "") else None
         except (TypeError, ValueError): pass
     save_index()
-    con = db(); con.execute("UPDATE intercepts SET condition=?, value=? WHERE name=?",
+    with _DB_WRITE_LOCK:
+        con = db(); con.execute("UPDATE intercepts SET condition=?, value=? WHERE name=?",
                             [cond, d.get("value"), name]); con.close()
     return jsonify(ok=True, condition=cond, value=d.get("value"))
 
@@ -264,12 +274,15 @@ def save():
     b = request.get_json()
     name, method, clicks = b["name"], b["method"], b["clicks"]
     c = compute(name, method, len(clicks)); d = BYNAME[name]
-    con = db()
-    con.execute("INSERT OR REPLACE INTO intercepts VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-        [name, method, d["condition"], d.get("value"), d.get("umpp", DEFAULT_UMPP),
-         json.dumps(clicks), c["n"], c["L_um"], c["l_um"], c["G"],
-         bool(b.get("done", False)), datetime.datetime.now()])
-    con.close()
+    # Serialize writes: two in-flight saves for the same (name, method) hit a DuckDB
+    # "Conflict on update!" TransactionException and the later click is silently lost.
+    with _DB_WRITE_LOCK:
+        con = db()
+        con.execute("INSERT OR REPLACE INTO intercepts VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            [name, method, d["condition"], d.get("value"), d.get("umpp", DEFAULT_UMPP),
+             json.dumps(clicks), c["n"], c["L_um"], c["l_um"], c["G"],
+             bool(b.get("done", False)), datetime.datetime.now()])
+        con.close()
     return jsonify(c)
 
 @app.route("/api/upload", methods=["POST"])
@@ -331,21 +344,22 @@ def set_umpp():
     # Rescale stored measurements by the calibration ratio ONLY. This preserves the
     # pixel geometry each count was actually made on (frozen test_len); a umpp change
     # is a pure unit conversion, unlike a grid change which must never rescale counts.
-    con = db()
-    for d in targets:
-        for method, n, old_umpp, old_L in con.execute(
-                "SELECT method,n,umpp,test_len_um FROM intercepts WHERE name=?",
-                [d["name"]]).fetchall():
-            if not old_umpp or not old_L:
-                continue
-            new_L = old_L / old_umpp * umpp
-            l = new_L / n if n else None
-            g = to_G(l/1000.0) if l else None
-            con.execute("""UPDATE intercepts SET umpp=?, test_len_um=?, l_um=?,
-                astm_g=? WHERE name=? AND method=?""",
-                [umpp, round(new_L, 1), round(l, 1) if l else None,
-                 round(g, 2) if g else None, d["name"], method])
-    con.close()
+    with _DB_WRITE_LOCK:
+        con = db()
+        for d in targets:
+            for method, n, old_umpp, old_L in con.execute(
+                    "SELECT method,n,umpp,test_len_um FROM intercepts WHERE name=?",
+                    [d["name"]]).fetchall():
+                if not old_umpp or not old_L:
+                    continue
+                new_L = old_L / old_umpp * umpp
+                l = new_L / n if n else None
+                g = to_G(l/1000.0) if l else None
+                con.execute("""UPDATE intercepts SET umpp=?, test_len_um=?, l_um=?,
+                    astm_g=? WHERE name=? AND method=?""",
+                    [umpp, round(new_L, 1), round(l, 1) if l else None,
+                     round(g, 2) if g else None, d["name"], method])
+        con.close()
     return jsonify(ok=True, updated=len(targets), umpp=umpp)
 
 
@@ -358,7 +372,8 @@ def delete():
     except FileNotFoundError: pass
     INDEX[:] = [d for d in INDEX if d["name"] != name]
     BYNAME.pop(name, None); save_index()
-    con = db(); con.execute("DELETE FROM intercepts WHERE name=?", [name]); con.close()
+    with _DB_WRITE_LOCK:
+        con = db(); con.execute("DELETE FROM intercepts WHERE name=?", [name]); con.close()
     return jsonify(ok=True)
 
 @app.route("/api/grid", methods=["GET", "POST"])
@@ -1147,7 +1162,9 @@ async function applyCalib(){if(calibPts.length<2){toast('Click both ends of the 
  if(r.ok){toast('Calibrated '+umpp.toFixed(6)+' µm/px ('+r.updated+' image'+(r.updated>1?'s':'')+')');cancelCalib();let keep=cur;await refreshImages();await select(keep);loadSummary();}else toast('Calibrate failed',1);}
 async function deleteImg(){if(!cur)return;if(!await uiConfirm('Delete '+cur+' and its measurements? This cannot be undone.'))return;
  let r=await(await fetch('/api/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:cur})})).json();
- if(r.ok){toast('Deleted '+cur);let i=imgs.findIndex(x=>x.name==cur);imgs=imgs.filter(x=>x.name!=cur);let nx=imgs[Math.min(i,imgs.length-1)];cur=null;renderList();if(nx)select(nx.name);else ctx.clearRect(0,0,cv.width,cv.height);loadSummary();}else toast('Delete failed',1);}
+ if(r.ok){toast('Deleted '+cur);let i=imgs.findIndex(x=>x.name==cur);imgs=imgs.filter(x=>x.name!=cur);let nx=imgs[Math.min(i,imgs.length-1)];cur=null;renderList();if(nx)select(nx.name);else ctx.clearRect(0,0,cv.width,cv.height);loadSummary();}
+ else if(r.error=='not found'){toast(cur+' was already deleted elsewhere — refreshing list');cur=null;await refreshImages();if(imgs.length)select(imgs[0].name);else ctx.clearRect(0,0,cv.width,cv.height);loadSummary();}
+ else toast('Delete failed'+(r.error?': '+r.error:''),1);}
 function undo(){clicks[method].pop();draw();persist(false);}
 function clr(){clicks[method]=[];draw();persist(false);}
 async function persist(dn){await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:cur,method,clicks:clicks[method],done:dn})});
@@ -1169,7 +1186,7 @@ async function doUpload(){let files=document.getElementById('fileIn').files;if(!
  for(let i=0;i<files.length;i++){
   let fd=new FormData();fd.append('file',files[i]);fd.append('condition',cond);if(val!=='')fd.append('value',val);fd.append('umpp',umpp);if(folder)fd.append('folder',folder);
   toast('Uploading '+(i+1)+' / '+files.length+' …');
-  try{let r=await(await fetch('/api/upload',{method:'POST',body:fd})).json();if(r.ok){ok++;if(!first)first=r.name;}else{fail++;if(!failMsg)failMsg=r.error||'';}}catch(e){fail++;}}
+  try{let r=await(await fetch('/api/upload',{method:'POST',body:fd})).json();if(r.ok){ok++;if(!first)first=r.name;}else{fail++;if(!failMsg)failMsg=r.error||'';}}catch(e){fail++;if(!failMsg)failMsg='server rejected the file ('+(e&&e.message||'network error')+')';}}
  await refreshImages();if(first)select(first);
  document.getElementById('fileIn').value='';
  if(fail&&!ok){toast(failMsg||('Upload failed ('+fail+')'),1);return;}
