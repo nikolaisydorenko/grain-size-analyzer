@@ -236,6 +236,8 @@
    <button class=btn onclick="resetAdj()">reset</button>
    <span class=sep></span>
    <button class=btn id=loupeBtn onclick="toggleLoupe()">🔍 Loupe</button>
+   <button class=btn id=moveBtn onclick="toggleMove()" title="Drag the Abrams circles to reposition them on this image (off-centre photos). Position is saved per image; test-line length — and so ℓ/G — is unchanged.">✥ Move circles</button>
+   <button class=btn id=centerBtn onclick="centerCircles()" title="Reset the Abrams circles to the image centre">⌖ Centre</button>
    <label title="Snap each click onto the nearest test line/circle"><input type=checkbox id=snap> snap to grid</label>
    <span class=sep></span>
    <span class=albl>Grid</span>
@@ -394,10 +396,16 @@ window.__DEMO=DEMO;    // handy for poking around in devtools
 
 /* ---------- geometry / compute, ported from app.py ---------- */
 function geometry(d){
- const w=d.w,h=d.h,cx=w/2,cy=h/2;
+ const w=d.w,h=d.h;let cx=w/2,cy=h/2;
  const rfr=CIRCLE_PRESETS[DEMO.grid.circles]||CIRCLE_PRESETS['3'];
  const lp=LINE_PRESETS[DEMO.grid.lines]||LINE_PRESETS['4x4'];
  const radii=rfr.map(f=>h*f);
+ /* per-image circle offset (coff), clamped so the largest circle stays in frame;
+    position never changes test length, so l/G are offset-independent */
+ const rmax=Math.max(...radii);
+ const off=d.coff||[0,0];
+ if(2*rmax<=w)cx=Math.min(Math.max(rmax,cx+off[0]),w-rmax);
+ if(2*rmax<=h)cy=Math.min(Math.max(rmax,cy+off[1]),h-rmax);
  const circ_px=2*Math.PI*radii.reduce((a,b)=>a+b,0);
  const lines=[];
  (lp.h||[]).forEach(f=>lines.push([0,h*f,w,h*f]));
@@ -481,6 +489,16 @@ async function route(u,opts){
   return J({cx:g.cx,cy:g.cy,radii:g.radii,lines:g.lines,w:g.w,h:g.h,umpp:umpp,
    clicks:clicks,done:done,stored_len:stored_len,
    cur_len:{circle:round1(g.circ_px*umpp),line:round1(g.line_px*umpp)}});
+ }
+
+ /* POST /api/circle_offset */
+ if(path==='/api/circle_offset'){
+  const b=body();const d=DEMO.byName[b.name];
+  if(!d)return J({ok:false,error:'not found'},404);
+  const ox=+b.dx||0,oy=+b.dy||0;
+  if(!ox&&!oy)delete d.coff;else d.coff=[Math.round(ox*10)/10,Math.round(oy*10)/10];
+  const g=geometry(d);
+  return J({ok:true,cx:g.cx,cy:g.cy});
  }
 
  /* POST /api/save */
@@ -924,14 +942,14 @@ async function dropImg(e,folder){e.preventDefault();e.currentTarget.classList.re
  if(names.length>1){msel.clear();updateMselBar();}
  await refreshImages();
  toast('Moved '+(moved>1?moved+' images':name)+' → '+folder);}
-function setMethod(m){method=m;setTab();if(G)draw();renderList();loadSummary();updateStale();}
+function setMethod(m){method=m;exitMove();let dis=m!='circle';document.getElementById('moveBtn').disabled=dis;document.getElementById('centerBtn').disabled=dis;setTab();if(G)draw();renderList();loadSummary();updateStale();}
 function updateStale(){let el=document.getElementById('staleWarn');if(!el)return;
  let msg='';
  if(G&&clicks[method].length&&G.stored_len&&G.stored_len[method]&&G.cur_len&&G.cur_len[method]){
   let rel=Math.abs(G.stored_len[method]-G.cur_len[method])/G.cur_len[method];
   if(rel>0.005)msg='⚠ counted on a previous grid — Clear & recount to update';}
  el.textContent=msg;}
-async function select(name){cur=name;G=await(await fetch('/api/geom/'+name)).json();
+async function select(name){cur=name;exitMove();G=await(await fetch('/api/geom/'+name)).json();
  clicks={circle:G.clicks.circle.slice(),line:G.clicks.line.slice()};done=G.done;
  let d=imgs.find(x=>x.name==name);
  document.getElementById('imgTitle').textContent=name;
@@ -969,7 +987,7 @@ function stats(){let n=clicks[method].length;let nel=document.getElementById('n'
  let L=testLen();document.getElementById('L').textContent=Math.round(L).toLocaleString();
  if(n>0){let l=L/n;document.getElementById('l').textContent=l.toFixed(1);document.getElementById('g').textContent=(-6.643856*Math.log10(l/1000)-3.288).toFixed(2);}
  else{document.getElementById('l').textContent='–';document.getElementById('g').textContent='–';}}
-cv.onclick=e=>{const r=cv.getBoundingClientRect();const x=(e.clientX-r.left)/scale,y=(e.clientY-r.top)/scale;
+cv.onclick=e=>{if(moveMode)return;const r=cv.getBoundingClientRect();const x=(e.clientX-r.left)/scale,y=(e.clientY-r.top)/scale;
  if(calibrating){calibPts.push([x,y]);if(calibPts.length>2)calibPts.shift();computeCalib();draw();return;}
  let p=[x,y];if(document.getElementById('snap').checked)p=snapToGrid(x,y);
  clicks[method].push(p);draw();persist(false);};
@@ -1006,6 +1024,28 @@ let panning=false,panSX,panSY,panL,panT;
 cv.addEventListener('mousedown',e=>{if(e.button!=1)return;e.preventDefault();let w=document.querySelector('.canvaswrap');panning=true;panSX=e.clientX;panSY=e.clientY;panL=w.scrollLeft;panT=w.scrollTop;});
 window.addEventListener('mousemove',e=>{if(!panning)return;let w=document.querySelector('.canvaswrap');w.scrollLeft=panL-(e.clientX-panSX);w.scrollTop=panT-(e.clientY-panSY);});
 window.addEventListener('mouseup',()=>{panning=false;});
+// ✥ move the Abrams circle grid (per-image offset; length — and so ℓ/G — unchanged)
+let moveMode=false,movingGrid=false,mvSX,mvSY,mvCX,mvCY;
+function exitMove(){moveMode=false;movingGrid=false;document.getElementById('moveBtn').classList.remove('on');cv.style.cursor='';}
+async function toggleMove(){if(method!='circle'){toast('Circle grid only — switch to the Abrams tab',1);return;}
+ if(!cur||!G)return;
+ if(moveMode){exitMove();return;}
+ if(clicks.circle.length&&!await uiConfirm('This image already has '+clicks.circle.length+' circle marks, counted on the CURRENT circle position. Moving the circles invalidates those marks — clear and recount afterwards. Move anyway?','Move'))return;
+ moveMode=true;document.getElementById('moveBtn').classList.add('on');cv.style.cursor='move';toast('Drag the image to reposition the circles · click ✥ again to finish');}
+function clampC(){let rm=Math.max(...G.radii);
+ if(2*rm<=G.w)G.cx=Math.min(Math.max(rm,G.cx),G.w-rm);else G.cx=G.w/2;
+ if(2*rm<=G.h)G.cy=Math.min(Math.max(rm,G.cy),G.h-rm);else G.cy=G.h/2;}
+cv.addEventListener('mousedown',e=>{if(!moveMode||e.button!=0)return;e.preventDefault();movingGrid=true;mvSX=e.clientX;mvSY=e.clientY;mvCX=G.cx;mvCY=G.cy;});
+window.addEventListener('mousemove',e=>{if(!movingGrid)return;G.cx=mvCX+(e.clientX-mvSX)/scale;G.cy=mvCY+(e.clientY-mvSY)/scale;clampC();draw();});
+window.addEventListener('mouseup',async()=>{if(!movingGrid)return;movingGrid=false;
+ let r=await(await fetch('/api/circle_offset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:cur,dx:G.cx-G.w/2,dy:G.cy-G.h/2})})).json();
+ if(r.ok){G.cx=r.cx;G.cy=r.cy;draw();toast('Circle position saved for '+cur);}else toast('Could not save circle position',1);});
+async function centerCircles(){if(method!='circle'){toast('Circle grid only — switch to the Abrams tab',1);return;}
+ if(!cur||!G)return;
+ if(Math.abs(G.cx-G.w/2)<0.5&&Math.abs(G.cy-G.h/2)<0.5){toast('Circles are already centred');return;}
+ if(clicks.circle.length&&!await uiConfirm('This image has '+clicks.circle.length+' circle marks counted on the CURRENT circle position. Re-centre anyway?','Re-centre'))return;
+ let r=await(await fetch('/api/circle_offset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:cur,dx:0,dy:0})})).json();
+ if(r.ok){G.cx=r.cx;G.cy=r.cy;draw();toast('Circles re-centred');}}
 // adjustable grid density
 async function loadGrid(){let g=await(await fetch('/api/grid')).json();
  document.getElementById('gridLines').innerHTML=g.line_options.map(o=>`<option ${o==g.grid.lines?'selected':''}>${o}</option>`).join('');}
@@ -1051,6 +1091,7 @@ async function persist(dn){await fetch('/api/save',{method:'POST',headers:{'Cont
 async function markdone(){await persist(true);renderList();loadSummary();let i=imgs.findIndex(x=>x.name==cur);if(i<imgs.length-1)select(imgs[i+1].name);else toast('All images in this list reviewed');}
 function step(d){let i=imgs.findIndex(x=>x.name==cur);let j=i+d;if(j>=0&&j<imgs.length)select(imgs[j].name);}
 document.onkeydown=e=>{if(document.getElementById('dlg').classList.contains('show')){if(e.key=='Escape')dlgClose(false);else if(e.key=='Enter'&&!dlgHasInput)dlgClose(true);return;}
+ if(e.key=='Escape'&&moveMode){exitMove();return;}
  if(e.key=='Escape'&&msel.size){mselClear();return;}
  if(e.target.tagName=='INPUT'||e.target.tagName=='SELECT')return;
  if(e.key=='z')undo();else if(e.key=='d')markdone();else if(e.key=='ArrowLeft')step(-1);else if(e.key=='ArrowRight')step(1);
